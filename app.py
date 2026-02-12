@@ -6,7 +6,7 @@ from streamlit_qrcode_scanner import qrcode_scanner
 
 # ข้อมูลที่คุณหามาได้
 LINE_TOKEN = "UQYOCYmqVmCuktPpx/6lgoBJ7tPKZDC2oJsYNlUf7l4m5e3vlNbE5K5sltM4I2bxKtDj27pqUoOBfNv/VQlsdQCN5pCK3cwwT3tqIstmh77mIp4Njm0x4987jvoQ2o3SlT+0OzklXS/REBTwCSstEwdB04t89/1O/w1cDnyilFU="
-USER_ID = "U173f9bec697cd453823111642849a2f3"
+USER_ID = "C7986c8ec91cb3ee8919cb0fd1dfc249f"
 
 st.set_page_config(page_title="BD Store Scan", layout="centered")
 
