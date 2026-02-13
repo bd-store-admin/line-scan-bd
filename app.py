@@ -1,39 +1,56 @@
 import streamlit as st
-from datetime import datetime
 from linebot import LineBotApi
 from linebot.models import TextSendMessage
-from streamlit_qrcode_scanner import qrcode_scanner
+import datetime
+from streamlit_js_eval import get_geolocation # ต้องลง Library เพิ่ม
 
-# ข้อมูลที่คุณหามาได้
-LINE_TOKEN = "UQYOCYmqVmCuktPpx/6lgoBJ7tPKZDC2oJsYNlUf7l4m5e3vlNbE5K5sltM4I2bxKtDj27pqUoOBfNv/VQlsdQCN5pCK3cwwT3tqIstmh77mIp4Njm0x4987jvoQ2o3SlT+0OzklXS/REBTwCSstEwdB04t89/1O/w1cDnyilFU="
-USER_ID = "C7986c8ec91cb3ee8919cb0fd1dfc249f"
+# --- ตั้งค่า LINE ---
+LINE_TOKEN = "วาง_Channel_Access_Token_ของคุณ"
+GROUP_ID = "C7986c8ec91cb3ee8919cb0fd1dfc249f" # รหัสกลุ่มที่คุณเพิ่งได้มา
+line_bot_api = LineBotApi(LINE_TOKEN)
 
-st.set_page_config(page_title="BD Store Scan", layout="centered")
+st.title("📦 ระบบเบิก-คืน อุปกรณ์อัตโนมัติ")
 
-def send_line(msg):
-    try:
-        line_bot_api = LineBotApi(LINE_TOKEN)
-        line_bot_api.push_message(USER_ID, TextSendMessage(text=msg))
-        return True
-    except: return False
+# 1. ข้อมูลพนักงาน
+name = st.text_input("ชื่อผู้ทำรายการ:")
 
-st.title("🛠 ระบบสแกนเบิกอุปกรณ์ BD Store")
-user_name = st.text_input("ระบุชื่อผู้ใช้งาน (พนักงาน)")
-action = st.radio("เลือกรายการ", ["✅ เบิกของ", "🔄 คืนของ"], horizontal=True)
+# 2. สถานะการทำรายการ
+status = st.radio("เลือกการกระทำ:", ("เบิกอุปกรณ์", "คืนอุปกรณ์"))
 
-st.subheader("📷 สแกน QR Code")
-qrcode = qrcode_scanner(key='scanner')
+# 3. ข้อมูลอุปกรณ์ (สแกน QR หรือพิมพ์)
+item_code = st.text_input("รหัสอุปกรณ์ / ชื่ออุปกรณ์:")
 
-if qrcode:
-    st.success(f"พบรหัสอุปกรณ์: {qrcode}")
-    if st.button("ยืนยันส่งข้อมูลเข้า LINE"):
-        if user_name:
-            now = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
-            msg = f"\n📢 แจ้งเตือนรายการ!\n👤 ผู้ทำรายการ: {user_name}\n📦 อุปกรณ์: {qrcode}\n⚙️ สถานะ: {action}\n⏰ เวลา: {now}"
-            if send_line(msg):
-                st.balloons()
-                st.success("ส่งข้อมูลเข้า LINE เรียบร้อยแล้ว!")
-            else:
-                st.error("เกิดข้อผิดพลาดในการส่ง LINE")
+# 4. ดึงข้อมูลพิกัด (Location)
+st.write("📍 กำลังระบุพิกัดของคุณ...")
+location = get_geolocation()
+
+if st.button("ยืนยันรายการ"):
+    if name and item_code:
+        # เตรียมข้อมูลวันที่และเวลา
+        now = datetime.datetime.now()
+        dt_string = now.strftime("%d/%m/%Y %H:%M:%S")
+        
+        # เตรียมข้อมูลพิกัด
+        if location:
+            lat = location['coords']['latitude']
+            lon = location['coords']['longitude']
+            map_url = f"https://www.google.com/maps?q={lat},{lon}"
+            loc_text = f"พิกัด: {lat}, {lon}\nดูแผนที่: {map_url}"
         else:
-            st.error("กรุณาใส่ชื่อพนักงานก่อนกดยืนยัน")
+            loc_text = "พิกัด: ไม่สามารถระบุได้ (กรุณาเปิด GPS)"
+
+        # สร้างข้อความสำหรับส่งเข้า LINE
+        msg = f"🔔 มีรายการใหม่!\n" \
+              f"ประเภท: {status}\n" \
+              f"ชื่อ: {name}\n" \
+              f"อุปกรณ์: {item_code}\n" \
+              f"วันที่เวลา: {dt_string}\n" \
+              f"{loc_text}"
+
+        try:
+            line_bot_api.push_message(GROUP_ID, TextSendMessage(text=msg))
+            st.success(f"บันทึกข้อมูล {status} เรียบร้อยแล้ว และแจ้งเตือนเข้ากลุ่มแล้วครับ!")
+        except Exception as e:
+            st.error(f"เกิดข้อผิดพลาด: {e}")
+    else:
+        st.warning("กรุณากรอกชื่อและรหัสอุปกรณ์ให้ครบถ้วนครับ")
